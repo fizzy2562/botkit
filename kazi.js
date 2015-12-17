@@ -62,6 +62,8 @@ This bot demonstrates many of the core features of Botkit:
 
 var Botkit = require('./lib/Botkit.js')
 var os = require('os');
+var request = require('request');
+var spawn = require('child_process').spawn;
 
 var controller = Botkit.slackbot({
   debug: false,
@@ -96,6 +98,7 @@ controller.hears(['hello','hi'],'direct_message,direct_mention,mention',function
   });
 })
 
+
 controller.hears(['call me (.*)'],'direct_message,direct_mention,mention',function(bot,message) {
   var matches = message.text.match(/call me (.*)/i);
   var name = matches[1];
@@ -123,7 +126,6 @@ controller.hears(['what is my name','who am i'],'direct_message,direct_mention,m
   })
 });
 
-
 controller.hears(['uptime','identify yourself','who are you','what is your name'],'direct_message,direct_mention,mention',function(bot,message) {
 
   var hostname = os.hostname();
@@ -143,14 +145,14 @@ controller.hears(['help', 'how does this work', 'what is bambu', 'how can I use 
                     convo.say("Type `/bambu_read` to see your top Bambu stories.");
                     convo.say("Type `/bambu_draft [url]` to suggest a story for curation.");
                     convo.say("Type `/bambu_fact` to hear a random fact.");
-                    convo.next();
+                    convo.stop();
                 }
             },
             {
                 pattern: bot.utterances.no,
                 callback: function(response, convo) {
                     convo.say("Well alrightie then!");
-                    convo.next();
+                    convo.stop();
                 }
             }
         ]);
@@ -158,6 +160,59 @@ controller.hears(['help', 'how does this work', 'what is bambu', 'how can I use 
     });
 
 });
+
+controller.hears(['wumpus'], 'direct_message', function(bot, message) {
+    bot.startConversation(message, function(err, convo) {
+        convo.ask("Wanna play Hunt the Wumpus?", [
+            {
+                pattern: bot.utterances.yes,
+                callback: function(response, convo) {
+                    convo.say("Type `quit` to quit.");
+                    var wumpus = spawn('wumpus');
+                    
+
+                }
+            },
+            {
+                pattern: bot.utterances.no,
+                callback: function(response, convo) {
+                    convo.say("Well alrightie then!");
+                    convo.stop();
+                }
+            }
+        ]);
+
+    });
+
+});
+
+controller.hears(['^.*customer ["\u201c](.+?)["\u201d].*$'],'direct_message,direct_mention', function(bot, message) {
+    bot.reply(message, 'One sec!');
+    var customerRegexp = /^.*customer ["\u201c](.+?)["\u201d].*$/g
+    var customerString = customerRegexp.exec(message.text)[1];
+    bot.reply(message, 'Looking for customers like "' + customerString + '".');
+
+    request('http://localhost:9000/kazi/customer?customer_name=' + encodeURIComponent(customerString), function(error, response, body) {
+        bot.reply(message, body);
+    });
+});
+
+
+controller.hears(['^.*user ["\u201c]<.*\|(.+?)>["\u201d].*$'],'direct_message,direct_mention', function(bot, message) {
+    bot.reply(message, 'One sec!');
+    var userRegexp = /^.*user ["\u201c]<.*\|(.+?)>["\u201d].*$/g
+    var userString = userRegexp.exec(message.text)[1];
+    bot.reply(message, "Checking the user email directory.");
+
+    request('http://localhost:9000/kazi/user?email=' + encodeURIComponent(userString), function(error, response, body) {
+        if (!error) {
+            bot.reply(message, body);
+        }
+    });
+});
+
+
+
 
 function formatUptime(uptime) {
   var unit = 'second';
