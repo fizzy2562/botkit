@@ -83,9 +83,6 @@ controller.hears(['hello','hi'],'direct_message,direct_mention,mention',function
     channel: message.channel,
     name: 'kazibear',
   },function(err,res) {
-    if (err) {
-      bot.log("Failed to add emoji reaction :(",err);
-    }
   });
 
 
@@ -161,35 +158,32 @@ controller.hears(['help', 'how does this work', 'what is bambu', 'how can I use 
 
 });
 
-var play = function(wumpus, response, convo) {
-    if (response && response.text) {
-        wumpus.stdin.write(response.text);
-    }
-
+var play = function(wumpus, convo) {
     var gameText = "";
-    while (true) {
-        var r = wumpus.stdout.read();
-        if (r) {
-            gameText += r;
+    wumpus.stdout.setEncoding('utf8');
+
+    wumpus.stdout.on('data', function(chunk) {
+        console.log(chunk);
+        gameText += chunk;
+        if (gameText.indexOf('?' !== -1)) {
+            var gamePrompt = gameText;
+            gameText = "";
+            convo.ask(gamePrompt, [{
+                pattern: ".*",
+                callback: function(response, data) {
+                    if (response.text === 'quit') {
+                        wumpus.kill();
+                        convo.say("Good game!");
+                        convo.next();
+                    } else {
+                        wumpus.stdin.write(response.text + '\n');
+                        convo.silentRepeat();
+                    }
+                }
+            }]);
+            convo.next();
         }
-        console.log(gameText);
-        if (gameText.indexOf('?', this.length - 1) !== -1) {
-            break;
-        }
-    }
-    convo.ask(gameText, [{
-        pattern: ".*",
-        callback: function(response, data) {
-            if (response === 'quit') {
-                wumpus.kill();
-                convo.say("Good game!");
-                convo.stop();
-            } else {
-                play(wumpus, response, convo);
-            }
-        }
-     }]);
-     convo.next();
+    });
 }
 
 controller.hears(['wumpus'], 'direct_message', function(bot, message) {
@@ -199,8 +193,9 @@ controller.hears(['wumpus'], 'direct_message', function(bot, message) {
                 pattern: bot.utterances.yes,
                 callback: function(response, convo) {
                     convo.say("Type `quit` to quit.");
-                    var wumpus = spawn('wumpus');
-                    play(wumpus, null, convo);
+                    var wumpus = spawn('python3',['pywumpus.py']);
+                    play(wumpus, convo);
+                    convo.next();
                 }
             },
             {
