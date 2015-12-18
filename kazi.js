@@ -145,18 +145,18 @@ controller.hears(['help', 'how does this work', 'what is bambu', 'how can I use 
                     convo.say("Type `/bambu_read` to see your top Bambu stories.");
                     convo.say("Type `/bambu_draft [url]` to suggest a story for curation.");
                     convo.say("Type `/bambu_fact` to hear a random fact.");
-                    convo.stop();
+                    convo.next();
                 }
             },
             {
                 pattern: bot.utterances.no,
                 callback: function(response, convo) {
                     convo.say("Well alrightie then!");
-                    convo.stop();
+                    convo.next();
                 }
             }
         ]);
-
+        convo.next();
     });
 
 });
