@@ -161,6 +161,37 @@ controller.hears(['help', 'how does this work', 'what is bambu', 'how can I use 
 
 });
 
+var play = function(wumpus, response, convo) {
+    if (response && response.text) {
+        wumpus.stdin.write(response.text);
+    }
+
+    var gameText = "";
+    while (true) {
+        var r = wumpus.stdout.read();
+        if (r) {
+            gameText += r;
+        }
+        console.log(gameText);
+        if (gameText.indexOf('?', this.length - 1) !== -1) {
+            break;
+        }
+    }
+    convo.ask(gameText, [{
+        pattern: ".*",
+        callback: function(response, data) {
+            if (response === 'quit') {
+                wumpus.kill();
+                convo.say("Good game!");
+                convo.stop();
+            } else {
+                play(wumpus, response, convo);
+            }
+        }
+     }]);
+     convo.next();
+}
+
 controller.hears(['wumpus'], 'direct_message', function(bot, message) {
     bot.startConversation(message, function(err, convo) {
         convo.ask("Wanna play Hunt the Wumpus?", [
@@ -169,8 +200,7 @@ controller.hears(['wumpus'], 'direct_message', function(bot, message) {
                 callback: function(response, convo) {
                     convo.say("Type `quit` to quit.");
                     var wumpus = spawn('wumpus');
-                    
-
+                    play(wumpus, null, convo);
                 }
             },
             {
